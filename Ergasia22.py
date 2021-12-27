@@ -50,4 +50,48 @@ def prepare_datasets(data_dir, train_pct=0.6, val_pct=0.2, test_pct=0.2, batch_s
     test_ds = tf.data.Dataset
     classes = []
 
+def prepare_datasets(data_dir, train_pct=0.7, val_pct=0.3, test_pct=0.2, batch_size=32, img_size=(256, 256)):
+    # To run the program without GPU it is important to reduce the size of data that will be trained
+    # All the data - test (here is a portion of the data)
+    devel_ds = tf.keras.utils.image_dataset_from_directory(
+        data_dir,
+        validation_split=0.8,
+        color_mode='rgb',
+        subset="training",
+        seed=123,
+        image_size=img_size,
+        batch_size=batch_size)
+
+    # Training set
+    train_size = int(train_pct * (tf.data.experimental.cardinality(devel_ds).numpy()))
+    # train_ds = tf.data.Dataset.range(3500)
+    train_ds = devel_ds.take(train_size)
+
+    # Validate set
+    validate_size = int(val_pct * (tf.data.experimental.cardinality(devel_ds).numpy()))
+    # val_ds = tf.data.Dataset.range(1000)
+    val_ds = devel_ds.skip(train_size)
+
+    # Test set
+    test_ds = tf.keras.utils.image_dataset_from_directory(
+        data_dir,
+        validation_split=test_pct,
+        subset="validation",
+        seed=123,
+        image_size=img_size,
+        batch_size=batch_size)
+    # List with the names of the 4 classes
+    classes = devel_ds.class_names
+    print(classes)
+    y = np.concatenate([y for x, y in devel_ds])
+    plt.hist(y, list(range(len(classes) + 1)))
+    plt.show()
+
+    return devel_ds, train_ds, val_ds, test_ds, classes    
+    
+    
+    
 data_dir = unzipfile(output)
+devel_ds, train_ds, val_ds, test_ds, classes = prepare_datasets(data_dir)
+
+
