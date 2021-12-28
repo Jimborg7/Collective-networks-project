@@ -50,12 +50,16 @@ def prepare_datasets(data_dir, train_pct=0.6, val_pct=0.2, test_pct=0.2, batch_s
     test_ds = tf.data.Dataset
     classes = []
 
-def prepare_datasets(data_dir, train_pct=0.7, val_pct=0.3, test_pct=0.2, batch_size=32, img_size=(256, 256)):
+def prepare_datasets(data_dir, train_pct=0.6, val_pct=0.2, test_pct=0.2, batch_size=64, img_size=(299, 299)):
     # To run the program without GPU it is important to reduce the size of data that will be trained
     # All the data - test (here is a portion of the data)
+
+    # AUTOTUNE = tf.data.AUTOTUNE
+
     devel_ds = tf.keras.utils.image_dataset_from_directory(
         data_dir,
-        validation_split=0.8,
+        validation_split=train_pct + val_pct,
+        # Gia olo to sunolo ginetai iso me to test_pct ara validation_split = test_pct
         color_mode='rgb',
         subset="training",
         seed=123,
@@ -63,14 +67,13 @@ def prepare_datasets(data_dir, train_pct=0.7, val_pct=0.3, test_pct=0.2, batch_s
         batch_size=batch_size)
 
     # Training set
-    train_size = int(train_pct * (tf.data.experimental.cardinality(devel_ds).numpy()))
-    # train_ds = tf.data.Dataset.range(3500)
+    train_size = int(round((train_pct + 0.15) * (tf.data.experimental.cardinality(devel_ds).numpy())))
     train_ds = devel_ds.take(train_size)
 
     # Validate set
-    validate_size = int(val_pct * (tf.data.experimental.cardinality(devel_ds).numpy()))
-    # val_ds = tf.data.Dataset.range(1000)
-    val_ds = devel_ds.skip(train_size)
+    validate_size = int(round((val_pct + 0.05) * (tf.data.experimental.cardinality(devel_ds).numpy())))
+    val_tmp = devel_ds.skip(train_size)
+    val_ds = val_tmp.take(validate_size)
 
     # Test set
     test_ds = tf.keras.utils.image_dataset_from_directory(
@@ -80,18 +83,66 @@ def prepare_datasets(data_dir, train_pct=0.7, val_pct=0.3, test_pct=0.2, batch_s
         seed=123,
         image_size=img_size,
         batch_size=batch_size)
+
     # List with the names of the 4 classes
     classes = devel_ds.class_names
     print(classes)
-    y = np.concatenate([y for x, y in devel_ds])
+
+    # See the results in a graph to check the number of elements
+    '''y = np.concatenate([y for x, y in devel_ds])
     plt.hist(y, list(range(len(classes) + 1)))
-    plt.show()
+    plt.show()'''
 
-    return devel_ds, train_ds, val_ds, test_ds, classes    
-    
-    
-    
-data_dir = unzipfile(output)
+    # Take care of performance and blocking
+    # devel_ds = devel_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
+    # test_ds = test_ds.cache().prefetch(buffer_size=AUTOTUNE)
+
+    return devel_ds, train_ds, val_ds, test_ds, classes
+ 
+
+def cnn1(num_classes):
+    # Normalizing the images from the [0,255] values of RGB to[0,1]
+    model = keras.Sequential([
+        layers.Rescaling(1. / 255, input_shape=(299, 299, 3)),
+        layers.Conv2D(8, kernel_size=(3, 3), padding='same', activation='relu'),
+        layers.MaxPooling2D(strides=2),
+        layers.Conv2D(16, kernel_size=(3, 3), padding='same', activation='relu'),
+        layers.MaxPooling2D(strides=2),
+        layers.Flatten(),
+        layers.Dense(32, activation='relu'),
+        layers.Dense(num_classes, activation='softmax')
+    ])
+    return model
+
+
+
+# Download data
+# get_data()
+# data_dir = unzipfile(output)
+
+data_dir = "C:\\Users\\jimge\\Desktop\\Ergasia_Diou_2h\\ergasia_diou\\COVID-19_Radiography_Dataset"
 devel_ds, train_ds, val_ds, test_ds, classes = prepare_datasets(data_dir)
+num_classes = len(classes)
+model = cnn1(num_classes)
 
+model.summary()
+print(train_ds)
+
+# Training part
+batch_size = 64
+epochs = 20
+
+callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3, beta_1=0.9, beta_2=0.99),
+    loss="categorical_crossentropy",
+    metrics=['accuracy'])
+
+model.fit(
+    train_ds,
+    validation_data=val_ds,
+    epochs=epochs,
+    batch_size=batch_size,
+    callbacks=callback,
+    verbose=0)
 
