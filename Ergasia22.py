@@ -42,15 +42,6 @@ def unzipfile(output):
 
 
 def prepare_datasets(data_dir, train_pct=0.6, val_pct=0.2, test_pct=0.2, batch_size=64, img_size=(299, 299)):
-    tf.keras.utils.image_dataset_from_directory
-    # (x_train,x_test,y_train,y_test) =
-    devel_ds = tf.data.Dataset
-    train_ds = tf.data.Dataset
-    val_ds = tf.data.Dataset
-    test_ds = tf.data.Dataset
-    classes = []
-
-def prepare_datasets(data_dir, train_pct=0.6, val_pct=0.2, test_pct=0.2, batch_size=64, img_size=(299, 299)):
     # To run the program without GPU it is important to reduce the size of data that will be trained
     # All the data - test (here is a portion of the data)
 
@@ -64,7 +55,8 @@ def prepare_datasets(data_dir, train_pct=0.6, val_pct=0.2, test_pct=0.2, batch_s
         subset="training",
         seed=123,
         image_size=img_size,
-        batch_size=batch_size)
+        batch_size=batch_size,
+        label_mode = 'categorical'    )
 
     # Training set
     train_size = int(round((train_pct + 0.15) * (tf.data.experimental.cardinality(devel_ds).numpy())))
@@ -113,8 +105,6 @@ def cnn1(num_classes):
         layers.Dense(num_classes, activation='softmax')
     ])
     return model
-
-
 
 def cnn2(num_classes):
     model = keras.Sequential([
@@ -176,12 +166,12 @@ model.compile(
     metrics=['accuracy'])
 
 model.fit(
-    train_ds,
+    x = train_ds,
     validation_data=val_ds,
     epochs=epochs,
     batch_size=batch_size,
     callbacks=callback,
-    verbose=0)
+    verbose='auto')
 
 cm , yhat = confusion_matrix(model, test_ds)
 print(cm)
