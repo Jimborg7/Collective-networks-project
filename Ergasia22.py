@@ -116,6 +116,43 @@ def cnn1(num_classes):
 
 
 
+def cnn2(num_classes):
+    model = keras.Sequential([
+        tf.keras.layers.Rescaling(1. / 255, input_shape=(299,299,3)),
+        layers.Conv2D(32, kernel_size=(3,3), padding='same',activation='relu'),
+        layers.Conv2D(32, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.MaxPooling2D(strides=4),
+        layers.Conv2D(64, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.Conv2D(64, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.MaxPooling2D(strides=2),
+        layers.Conv2D(128, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.Conv2D(128, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.MaxPooling2D(strides=2),
+        layers.Conv2D(256, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.Conv2D(256, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.Conv2D(256, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.MaxPooling2D(strides=2),
+        layers.Conv2D(512, kernel_size=(3,3), padding='same', activation='relu'),
+        layers.MaxPooling2D(strides=2),
+        layers.Flatten(),
+        layers.Dense(1024, activation='relu'),
+        layers.Dense(num_classes, activation='softmax')
+    ])
+    return model
+
+def confusion_matrix(model, test_ds):
+    y_test = []
+    y_pred = []
+    for x_1,y_1 in test_ds:
+        y_pred_1 = model.predict(x_1)
+        y_test.append(y_1)
+        y_pred.append(y_pred_1)
+    y_true = np.concatenate(y_test)
+    y_p = np.concatenate(y_pred)
+    y_hat = tf.argmax(y_p,axis = 1)
+    cm = tf.math.confusion_matrix(y_true,y_hat)
+    return cm, y_hat
+
 # Download data
 # get_data()
 # data_dir = unzipfile(output)
@@ -145,4 +182,28 @@ model.fit(
     batch_size=batch_size,
     callbacks=callback,
     verbose=0)
+
+cm , yhat = confusion_matrix(model, test_ds)
+print(cm)
+
+
+model2 = cnn2(num_classes)
+model2.summary()
+model2.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3, beta_1=0.9, beta_2=0.99),
+    loss="categorical_crossentropy",
+    metrics=['accuracy'])
+
+model2.fit(
+    x = train_ds,
+    validation_data=val_ds,
+    epochs=epochs,
+    batch_size=batch_size,
+    callbacks=callback,
+    verbose='auto')
+
+cm2,y_hat2 = confusion_matrix(model2, test_ds)
+print(cm2)
+
+
 
