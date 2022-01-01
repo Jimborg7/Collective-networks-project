@@ -160,19 +160,6 @@ def confusion_matrix(model, test_ds):
     cm = tf.math.confusion_matrix(y_true, y_hat)
     return cm, y_hat
 
-
-
-#For Overfitting
-def data_augm(img_size):
-    data_augmentation = keras.Sequential([
-        tf.keras.layers.RandomFlip("horizontal", input_shape=(img_size, img_size, 3)),
-        tf.keras.layers.RandomRotation(0.1),
-        tf.keras.layers.RandomZoom(0.1)
-    ])
-    return data_augmentation
-
-
-
 # Download data
 # get_data()
 # data_dir = unzipfile(output)
@@ -184,8 +171,6 @@ num_classes = len(classes)
 batch_size = 64
 epochs = 20
 
-#for overfitting
-#data_augmentation = data_augm(299)
 # Creation of First model and seeing the summary of that (number of parameters and sizes of layers)
 model = cnn1(num_classes)
 model.summary()
